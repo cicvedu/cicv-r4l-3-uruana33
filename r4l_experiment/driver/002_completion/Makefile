@@ -4,6 +4,9 @@ ifneq ($(KERNELRELEASE),)
 module-objs := completion.o	
 obj-m := completion.o
 
+module-objs := rust_completion.o	
+obj-m := rust_completion.o
+
 CFLAGS_hello_world.o := -DDEBUG
 else
 KDIR := ../../../linux

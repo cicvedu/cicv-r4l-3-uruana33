@@ -46,6 +46,7 @@ pub use macros;
 #[cfg(CONFIG_ARM_AMBA)]
 pub mod amba;
 pub mod chrdev;
+pub mod complete;
 #[cfg(CONFIG_COMMON_CLK)]
 pub mod clk;
 pub mod cred;

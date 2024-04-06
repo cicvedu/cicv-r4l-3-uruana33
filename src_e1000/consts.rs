@@ -72,6 +72,7 @@ pub(crate) const E1000_RCTL_SECRC:u32 = 0x04000000;	/* Strip Ethernet CRC */
 
 pub(crate) const E1000_CTRL_RST:u32 = 0x04000000;	/* Global reset */
 pub(crate) const E1000_MANC_ARP_EN:u32 = 0x00002000;	/* Enable ARP Request Filtering */
+pub(crate) const E1000_CTRL_PHY_RST:u32 =  0x80000000; /* PHY Reset */
 
 
 // pub(crate) const E1000_:u32 = ;	/*  */

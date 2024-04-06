@@ -9,6 +9,7 @@
 use crate::{
     bindings, device,
     error::{code::ENOMEM, from_kernel_result},
+    pr_info,
     str::CStr,
     sync::UniqueArc,
     to_result,
@@ -177,6 +178,7 @@ impl<T: DeviceOperations> Registration<T> {
 
     /// Register a network device.
     pub fn register(&mut self, data: T::Data) -> Result {
+        pr_info!("-----------注册网卡设备, net::Registration T is a DeviceOperations-------------\n");
         // SAFETY: `dev` was allocated during initialization and is guaranteed to be valid.
         let ret = unsafe {
             (*self.dev).netdev_ops = Self::build_device_ops();
@@ -338,6 +340,7 @@ impl<T: DeviceOperations> Registration<T> {
             let dev = unsafe { Device::from_ptr(netdev) };
             // SAFETY: The value stored as driver data was returned by `into_pointer` during registration.
             let data = unsafe { T::Data::borrow(bindings::dev_get_drvdata(&mut (*netdev).dev)) };
+            pr_info!("-----------启动网卡设备 T is a DeviceOperations-------------\n");
             T::open(dev, data)?;
             Ok(0)
         }
@@ -349,6 +352,7 @@ impl<T: DeviceOperations> Registration<T> {
             let dev = unsafe { Device::from_ptr(netdev) };
             // SAFETY: The value stored as driver data was returned by `into_pointer` during registration.
             let data = unsafe { T::Data::borrow(bindings::dev_get_drvdata(&mut (*netdev).dev)) };
+            pr_info!("-----------禁用网卡设备 T is a DeviceOperations-------------\n");
             T::stop(dev, data)?;
             Ok(0)
         }
@@ -479,6 +483,14 @@ impl Napi {
         }
     }
 
+    /// Disable NAPI scheduling.
+    pub fn disable(&self) {
+        // SAFETY: The existence of a shared reference means `self.0` is valid.
+        unsafe {
+            bindings::napi_disable(self.0.get());
+        }
+    }
+
     /// Schedule NAPI poll routine to be called if it is not already running.
     pub fn schedule(&self) {
         // SAFETY: The existence of a shared reference means `self.0` is valid.
@@ -509,6 +521,12 @@ impl Napi {
     pub fn dev_get(&self) -> ARef<Device> {
         // SAFETY: The existence of a shared reference means `self.0` is valid.
         unsafe { &*(addr_of!((*self.0.get()).dev).read() as *const Device) }.into()
+    }
+
+    /// Delete napi
+    pub fn del_napi(&self) {
+        // SAFETY: The existence of a shared reference means `self.0` is valid.
+        unsafe { bindings::__netif_napi_del(self.0.get())};
     }
 }
 

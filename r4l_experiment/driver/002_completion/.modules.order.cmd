@@ -1,0 +1,1 @@
+cmd_/home/ubuntu/r4l/cicv-r4l-3-uruana33/r4l_experiment/driver/002_completion/modules.order := {   echo /home/ubuntu/r4l/cicv-r4l-3-uruana33/r4l_experiment/driver/002_completion/rust_completion.ko; :; } > /home/ubuntu/r4l/cicv-r4l-3-uruana33/r4l_experiment/driver/002_completion/modules.order

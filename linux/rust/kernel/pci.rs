@@ -14,6 +14,7 @@ use crate::{
     to_result,
     types::PointerWrapper,
     ThisModule,
+    pr_info,
 };
 
 /// An adapter for the registration of PCI drivers.
@@ -35,6 +36,7 @@ impl<T: Driver> driver::DriverOps for Adapter<T> {
         pdrv.probe = Some(Self::probe_callback);
         pdrv.remove = Some(Self::remove_callback);
         pdrv.id_table = T::ID_TABLE.as_ref();
+        pr_info!("---------on Adapter, impl driver::DriverOps, do pci_register_driver-----------\n");
         // SAFETY:
         //   - `pdrv` lives at least until the call to `pci_unregister_driver()` returns.
         //   - `name` pointer has static lifetime.
@@ -45,6 +47,7 @@ impl<T: Driver> driver::DriverOps for Adapter<T> {
     }
 
     unsafe fn unregister(reg: *mut bindings::pci_driver) {
+        pr_info!("---------on Adapter, impl driver::DriverOps, do pci_unregister_driver-----------\n");
         // SAFETY: By the safety requirements of this function (defined in the trait definition),
         // `reg` was passed (and updated) by a previous successful call to
         // `__pci_register_driver`.
@@ -71,6 +74,7 @@ impl<T: Driver> Adapter<T> {
                 let ptr = unsafe {id.cast::<u8>().offset(offset as _).cast::<Option<T::IdInfo>>()};
                 unsafe {(&*ptr).as_ref()}
             };
+            pr_info!("---------on Adapter, probe_callback, T is a Driver, do T::probe()----------\n");
             let data = T::probe(&mut dev, info)?;
              // SAFETY: `pdev` is guaranteed to be a valid, non-null pointer.
             unsafe { bindings::pci_set_drvdata(pdev, data.into_pointer() as _) };
@@ -88,7 +92,10 @@ impl<T: Driver> Adapter<T> {
         //     `remove` is the canonical kernel location to free driver data. so OK
         //     to convert the pointer back to a Rust structure here.
         let data = unsafe { T::Data::from_pointer(ptr) };
-        T::remove(&data);
+        pr_info!("---------on Adapter remove_callback, T is a Driver, do T::remove()-----------\n");
+        let mut dev = unsafe { Device::from_ptr(pdev) };
+        T::remove(&mut dev, &data);
+        pr_info!("---------on Adapter remove_callback, T::Data is a DeviceRemoval, do T::Data::remove()-----------\n");
         <T::Data as driver::DeviceRemoval>::device_remove(&data);
     }
 }
@@ -224,7 +231,7 @@ pub trait Driver {
     ///
     /// Called when a platform device is removed.
     /// Implementers should prepare the device for complete removal here.
-    fn remove(_data: &Self::Data);
+    fn remove(dev: &mut Device, _data: &Self::Data);
 }
 
 /// PCI resource
@@ -326,6 +333,18 @@ impl Device {
     /// Get address for accessing the device
     pub fn map_resource(&self, resource: &Resource, len: usize) -> Result<MappedResource> {
         MappedResource::try_new(resource.start, len)
+    }
+
+    /// Release selected PCI I/O and memory resources
+    pub fn release_selected_regions(&mut self, bars: i32) {
+        // SAFETY: By the type invariants, we know that `self.ptr` is non-null and valid.
+        unsafe { bindings::pci_release_selected_regions(self.ptr, bars) };
+    }
+
+    /// pci_disable_device
+    pub fn disable_device(&mut self) {
+        // SAFETY: By the type invariants, we know that `self.ptr` is non-null and valid.
+        unsafe { bindings::pci_disable_device(self.ptr) };
     }
 }
 

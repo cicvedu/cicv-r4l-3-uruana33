@@ -16,6 +16,7 @@ use crate::{
     types::PointerWrapper,
     user_ptr::{UserSlicePtr, UserSlicePtrReader, UserSlicePtrWriter},
     ARef, AlwaysRefCounted,
+    pr_info,
 };
 use core::convert::{TryFrom, TryInto};
 use core::{cell::UnsafeCell, marker, mem, ptr};
@@ -298,6 +299,7 @@ impl<A: OpenAdapter<T::OpenData>, T: Operations> OperationsVtable<A, T> {
         inode: *mut bindings::inode,
         file: *mut bindings::file,
     ) -> core::ffi::c_int {
+        pr_info!("-----------打开设备时触发回调 open_callback-----------\n");
         from_kernel_result! {
             // SAFETY: `A::convert` must return a valid non-null pointer that
             // should point to data in the inode or file that lives longer
@@ -325,6 +327,7 @@ impl<A: OpenAdapter<T::OpenData>, T: Operations> OperationsVtable<A, T> {
         len: core::ffi::c_size_t,
         offset: *mut bindings::loff_t,
     ) -> core::ffi::c_ssize_t {
+        pr_info!("-----------设备读操作时触发回调 read_callback-----------\n");
         from_kernel_result! {
             let mut data =
                 unsafe { UserSlicePtr::new(buf as *mut core::ffi::c_void, len).writer() };
@@ -378,6 +381,7 @@ impl<A: OpenAdapter<T::OpenData>, T: Operations> OperationsVtable<A, T> {
         len: core::ffi::c_size_t,
         offset: *mut bindings::loff_t,
     ) -> core::ffi::c_ssize_t {
+        pr_info!("-----------设备写操作时触发回调 write_callback-----------\n");
         from_kernel_result! {
             let mut data =
                 unsafe { UserSlicePtr::new(buf as *mut core::ffi::c_void, len).reader() };

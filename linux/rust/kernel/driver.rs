@@ -5,7 +5,7 @@
 //! Each bus/subsystem is expected to implement [`DriverOps`], which allows drivers to register
 //! using the [`Registration`] class.
 
-use crate::{error::code::*, str::CStr, sync::Arc, Result, ThisModule};
+use crate::{error::code::*, str::CStr, sync::Arc, Result, ThisModule, pr_info};
 use alloc::boxed::Box;
 use core::{cell::UnsafeCell, marker::PhantomData, ops::Deref, pin::Pin};
 
@@ -62,6 +62,7 @@ impl<T: DriverOps> Registration<T> {
     ///
     /// Returns a pinned heap-allocated representation of the registration.
     pub fn new_pinned(name: &'static CStr, module: &'static ThisModule) -> Result<Pin<Box<Self>>> {
+        pr_info!("---------on Driver Registration 初始化时触发-----------\n");
         let mut reg = Pin::from(Box::try_new(Self::new())?);
         reg.as_mut().register(name, module)?;
         Ok(reg)
@@ -85,6 +86,7 @@ impl<T: DriverOps> Registration<T> {
 
         // SAFETY: `concrete_reg` was initialised via its default constructor. It is only freed
         // after `Self::drop` is called, which first calls `T::unregister`.
+        pr_info!("---------on Driver Registration 初始化时触发, 将调用Adapter register-----------\n");
         unsafe { T::register(this.concrete_reg.get(), name, module) }?;
 
         this.is_registered = true;

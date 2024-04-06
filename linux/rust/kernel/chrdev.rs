@@ -17,6 +17,7 @@ use crate::bindings;
 use crate::error::{code::*, Error, Result};
 use crate::file;
 use crate::str::CStr;
+use crate::pr_info;
 
 /// Character device.
 ///
@@ -68,6 +69,7 @@ impl Cdev {
 
 impl Drop for Cdev {
     fn drop(&mut self) {
+        pr_info!("---------注销cdev--------\n");
         // SAFETY: [`self.0`] is valid and non-null by the type invariants.
         unsafe {
             bindings::cdev_del(self.0);
@@ -138,6 +140,7 @@ impl<const N: usize> Registration<{ N }> {
         let this = unsafe { self.get_unchecked_mut() };
         if this.inner.is_none() {
             let mut dev: bindings::dev_t = 0;
+            pr_info!("-------动态获取设备号, Registration:register call alloc_chrdev_region--------\n");
             // SAFETY: Calling unsafe function. `this.name` has `'static`
             // lifetime.
             let res = unsafe {
@@ -158,6 +161,7 @@ impl<const N: usize> Registration<{ N }> {
                 cdevs: [NONE; N],
                 _pin: PhantomPinned,
             });
+            pr_info!("-------动态获取设备号成功, 设备号 RegistrationInner.dev {}--------\n", dev);
         }
 
         let mut inner = this.inner.as_mut().unwrap();
@@ -168,7 +172,9 @@ impl<const N: usize> Registration<{ N }> {
         // SAFETY: The adapter doesn't retrieve any state yet, so it's compatible with any
         // registration.
         let fops = unsafe { file::OperationsVtable::<Self, T>::build() };
+        pr_info!("-------构建并初始化cdev结构, 绑定操作列表file_operations, 设备号 RegistrationInner.dev {}--------\n", inner.dev);
         let mut cdev = Cdev::alloc(fops, this.this_module)?;
+        pr_info!("通过cdev_add()向系统添加一个cdev以完成注册\n");
         cdev.add(inner.dev + inner.used as bindings::dev_t, 1)?;
         inner.cdevs[inner.used].replace(cdev);
         inner.used += 1;
@@ -195,7 +201,9 @@ impl<const N: usize> Drop for Registration<{ N }> {
             // [`bindings::unregister_chrdev_region`].
             for i in 0..inner.used {
                 inner.cdevs[i].take();
+                pr_info!("--------触发cdev drop---------\n")
             }
+            pr_info!("---------释放设备号 {}--------\n", inner.dev);
             // SAFETY: [`self.inner`] is Some, so [`inner.dev`] was previously
             // created using [`bindings::alloc_chrdev_region`].
             unsafe {

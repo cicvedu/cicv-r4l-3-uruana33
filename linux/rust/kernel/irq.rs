@@ -15,6 +15,7 @@ use crate::{
     str::CString,
     types::PointerWrapper,
     Error, Result, ScopeGuard,
+    pr_info,
 };
 use core::{fmt, marker::PhantomData, ops::Deref};
 use macros::vtable;
@@ -356,6 +357,7 @@ impl<T: PointerWrapper> InternalRegistration<T> {
 
 impl<T: PointerWrapper> Drop for InternalRegistration<T> {
     fn drop(&mut self) {
+        pr_info!("***********drop InternalRegistration**************");
         // Unregister irq handler.
         //
         // SAFETY: When `try_new` succeeds, the irq was successfully requested, so it is ok to free
